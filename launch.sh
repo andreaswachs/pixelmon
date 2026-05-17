@@ -7,8 +7,13 @@ cd /data
 WORLD_DIR="/data/world/${LEVEL:-world}"
 mkdir -p "$WORLD_DIR"
 
-# Symlink server config files from ConfigMap mount (read-only)
-for cfg_file in server.properties ops.json whitelist.json banned-ips.json banned-players.json; do
+# Apply ConfigMap files to /data
+# server.properties is copied (editable), others are symlinked
+if [ -f "/data/server-config/server.properties" ] && [ ! -f "/data/.server-properties-applied" ]; then
+    cp "/data/server-config/server.properties" /data/server.properties
+    touch /data/.server-properties-applied
+fi
+for cfg_file in ops.json whitelist.json banned-ips.json banned-players.json; do
     if [ -f "/data/server-config/$cfg_file" ] && [ ! -L "/data/$cfg_file" ]; then
         rm -f "/data/$cfg_file"
         ln -sf "/data/server-config/$cfg_file" "/data/$cfg_file"
@@ -32,7 +37,8 @@ sed -i "s/level-name=.*/level-name=${WORLD_DIR//\//\\/}/" /data/server.propertie
 
 # Apply MOTD override
 if [[ -n "$MOTD" ]]; then
-    sed -i "s/motd\s*=.*/motd=$MOTD/" /data/server.properties
+    escaped_motd=$(printf '%s\n' "$MOTD" | sed 's/[\/&]/\\&/g')
+    sed -i "s/motd\s*=.*/motd=$escaped_motd/" /data/server.properties
 fi
 
 # Ensure server port
