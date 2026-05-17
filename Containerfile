@@ -21,7 +21,7 @@ RUN curl -Lo /tmp/neoforge-installer.jar \
     rm /tmp/neoforge-installer.jar
 
 # Download mods from Modrinth API
-RUN MODRINTH_API="https://api.modrinth.com/v2/version" && \
+RUN set -e && MODRINTH_API="https://api.modrinth.com/v2/version" && \
     for id in \
       qv3qT6AO:journeymap-neoforge-1.21.1-6.0.0-beta.48.jar \
       zRGLFYRx:jei-1.21.1-neoforge-19.21.2.313.jar \
@@ -41,6 +41,7 @@ RUN MODRINTH_API="https://api.modrinth.com/v2/version" && \
 
 # Copy default config files
 COPY server-files/ /data/
+RUN rm -f /data/config/.gitkeep /data/defaultconfigs/.gitkeep /data/resourcepacks/.gitkeep
 
 # Set ownership
 RUN chown -R minecraft:minecraft /data
