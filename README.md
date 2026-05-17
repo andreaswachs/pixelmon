@@ -1,64 +1,88 @@
-# [The Pixelmon Modpack 9.1.13](https://www.curseforge.com/minecraft/modpacks/the-pixelmon-modpack) on Curseforge
+# The Pixelmon Modpack 9.3.16
+
+NeoForge 1.21.1 · Java 21 · Kubernetes/Container
 
 <!-- toc -->
 
 - [Description](#description)
 - [Requirements](#requirements)
+- [Volumes](#volumes)
+  * [World PVC: /data/world](#world-pvc-dataworld)
+  * [ConfigMap: /data/server-config](#configmap-dataserver-config)
 - [Options](#options)
-  * [Adding Minecraft Operators](#adding-minecraft-operators)
 - [Troubleshooting](#troubleshooting)
   * [Accept the EULA](#accept-the-eula)
   * [Permissions of Files](#permissions-of-files)
-  * [Resetting](#resetting)
 - [Source](#source)
 
 <!-- tocstop -->
 
 ## Description
 
-This container is built to run on an [Unraid](https://unraid.net) server, outside of that your milliage will vary.
-
-The docker on first run will download the same version as tagged of `The Pixelmon Modpack 9.1.13` and install it.  This can take a while as the Forge installer can take a bit to complete.  You can watch the logs and it will eventually finish.
-
-After the first run it will simply start the server.
-
-Note: There are no modded minecraft files shipped in the container, they are all downloaded at runtime.
+Container image for a NeoForge 1.21.1 Minecraft server running The Pixelmon Modpack 9.3.16. Mods and server files are pre-installed in the image — no runtime downloads required. Designed for Kubernetes with ConfigMap-based configuration and PVC world persistence.
 
 ## Requirements
 
-* /data mounted to a persistent disk
-* Port 25565/tcp mapped
-* environment variable EULA set to "true"
+* Volume mounted to `/data/world` (PVC for persistent world data)
+* Volume mounted to `/data/server-config` (ConfigMap for server configuration, read-only)
+* Port `25565/tcp` exposed
+* Environment variable `EULA` set to `true`
 
-As the end user, you are repsonsible for accepting the EULA from Mojang to run their server, by default in the container it is set to false.
+You are responsible for accepting the Mojang EULA.
+
+## Volumes
+
+### World PVC: `/data/world`
+
+Persistent volume for world data. Mount a PersistentVolumeClaim here.
+
+```
+/data/world/
+  world/          # Default world directory (overridable via $LEVEL)
+    region/       # Region files
+    playerdata/   # Player data
+    ...
+```
+
+### ConfigMap: `/data/server-config`
+
+Read-only mount for server configuration files. The launch script applies these at startup. All files are optional — defaults are used if not provided.
+
+| File | Purpose | Format |
+|------|---------|--------|
+| `server.properties` | Server configuration | Java properties |
+| `ops.json` | Server operators | JSON array of operator objects |
+| `whitelist.json` | Whitelisted players | JSON array of player objects |
+| `banned-ips.json` | Banned IP addresses | JSON array |
+| `banned-players.json` | Banned players | JSON array of player objects |
+| `eula.txt` | Accept the EULA via file | `eula=true` |
+
+The default `server.properties` template includes modded-server tuning (watchdog disabled, async chunk writes) and can be fully overridden via this ConfigMap.
 
 ## Options
 
-These environment variables can be set at run time to override their defaults.
+Environment variables override their defaults at runtime.
 
-* JVM_OPTS "-Xms2048m -Xmx4096m"
-* MOTD "The Pixelmon Modpack 9.1.13 Server Powered by Docker"
-* LEVEL world
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EULA` | *(required)* | Must be `true` to start the server |
+| `MOTD` | `Pixelmon Server` | Server message of the day |
+| `LEVEL` | `world` | World directory name under `/data/world/` |
 
-### Adding Minecraft Operators
-
-Set the enviroment variable `OPS` with a comma separated list of players.
-
-example:
-`OPS="OpPlayer1,OpPlayer2"`
+JVM arguments are configured via `/data/server-config/user_jvm_args.txt` in the ConfigMap. Operators are managed via `ops.json` in the ConfigMap (no `$OPS` env var).
 
 ## Troubleshooting
 
 ### Accept the EULA
-Did you pass in the environment variable EULA set to `true`?
+
+Set the environment variable `EULA=true`, or mount a ConfigMap with `eula.txt` containing `eula=true`.
 
 ### Permissions of Files
-This container is designed for [Unraid](https://unraid.net) so the user in the container runs on uid 99 and gid 100.  This may cause permission errors on the /data mount on other systems.
 
-### Resetting
-If the install is incomplete for some reason.  Deleting the downloaded server file in /data will restart the install/upgrade process.
+The container runs as user `minecraft` with UID `1250` and GID `1250`. Ensure your PVC storage class supports `fsGroup: 1250` in the pod security context.
 
 ## Source
-Github: https://github.com/Goobaroo/docker-pixelmon
 
-Docker: https://hub.docker.com/repository/docker/goobaroo/pixelmon
+GitHub: https://github.com/andreaswachs/pixelmon
+
+Container: `ghcr.io/andreaswachs/pixelmon:9.3.16-1`
