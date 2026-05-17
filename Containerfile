@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y curl unzip && \
     rm -rf /var/lib/apt/lists/* && \
     groupadd -f --gid 1250 minecraft && \
     useradd --uid 1250 --gid 1250 --home /data --shell /bin/bash minecraft && \
-    mkdir -p /data/world /data/config && \
+    mkdir -p /data/world /data/config /data/server-config && \
     chown -R minecraft:minecraft /data
 
 COPY launch.sh /launch.sh
@@ -20,7 +20,7 @@ RUN chmod +x /launch.sh
 
 USER minecraft
 
-VOLUME ["/data/world", "/data/config"]
+VOLUME ["/data/world", "/data/server-config"]
 WORKDIR /data
 
 EXPOSE 25565/tcp

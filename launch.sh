@@ -7,19 +7,18 @@ cd /data
 WORLD_DIR="/data/world/${LEVEL:-world}"
 mkdir -p "$WORLD_DIR"
 
-# Symlink persistent config files if present in /data/config
+# Symlink server config files from ConfigMap mount (read-only)
 for cfg_file in server.properties ops.json ops.txt whitelist.json banned-ips.json banned-players.json; do
-    if [ -f "/data/config/$cfg_file" ] && [ ! -L "/data/$cfg_file" ]; then
+    if [ -f "/data/server-config/$cfg_file" ] && [ ! -L "/data/$cfg_file" ]; then
         rm -f "/data/$cfg_file"
-        ln -sf "/data/config/$cfg_file" "/data/$cfg_file"
+        ln -sf "/data/server-config/$cfg_file" "/data/$cfg_file"
     fi
 done
 
-# EULA: write to config dir if available, symlink to /data
+# EULA: prefer ConfigMap, fallback to writable /data
 if ! [[ "$EULA" = "false" ]]; then
-    if [ -d /data/config ]; then
-        echo "eula=true" > /data/config/eula.txt
-        ln -sf /data/config/eula.txt /data/eula.txt
+    if [ -f /data/server-config/eula.txt ]; then
+        ln -sf /data/server-config/eula.txt /data/eula.txt
     else
         echo "eula=true" > /data/eula.txt
     fi
@@ -50,14 +49,9 @@ if [[ -n "$MOTD" ]]; then
     sed -i "s/motd\s*=/ c motd=$MOTD" /data/server.properties
 fi
 
-# Write ops to config dir if available
+# Write ops to /data (writable)
 if [[ -n "$OPS" ]]; then
-    if [ -d /data/config ]; then
-        echo $OPS | awk -v RS=, '{print}' > /data/config/ops.txt
-        ln -sf /data/config/ops.txt /data/ops.txt
-    else
-        echo $OPS | awk -v RS=, '{print}' > /data/ops.txt
-    fi
+    echo $OPS | awk -v RS=, '{print}' > /data/ops.txt
 fi
 
 sed -i 's/server-port.*/server-port=25565/g' server.properties
