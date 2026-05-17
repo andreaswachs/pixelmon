@@ -1,0 +1,5 @@
+---
+name: pixelmon
+version: 9.1.13
+registry: oci://ghcr.io/andreaswachs/pixelmon
+platforms: linux/arm64
